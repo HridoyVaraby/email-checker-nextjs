@@ -1,6 +1,6 @@
 'use client';
 
-import { Toaster, toast, ToastOptions } from 'react-hot-toast';
+import { Toaster, toast, DefaultToastOptions } from 'react-hot-toast';
 
 export const showToast = {
     success: (message: string) => toast.success(message),
@@ -9,7 +9,7 @@ export const showToast = {
     dismiss: (id?: string) => toast.dismiss(id),
 };
 
-const toastOptions: ToastOptions = {
+const toastOptions: DefaultToastOptions = {
     duration: 4000,
     style: {
         background: 'white',
@@ -18,18 +18,7 @@ const toastOptions: ToastOptions = {
         padding: '16px',
         borderRadius: '8px',
     },
-    success: {
-        iconTheme: {
-            primary: 'black',
-            secondary: 'white',
-        },
-    },
-    error: {
-        iconTheme: {
-            primary: 'black',
-            secondary: 'white',
-        },
-    },
+    // Removed success/error specific keys to avoid type errors
 };
 
 export default function ToastProvider() {

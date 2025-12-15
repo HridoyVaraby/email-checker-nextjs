@@ -48,17 +48,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         // Generate fileContent
-        let fileContent: Buffer | string;
+        let fileContent: Blob;
         let contentType: string;
         let extension: string;
 
         if (format === 'xlsx') {
             const buffer = toExcel(filteredData, 'Verification Results');
-            fileContent = Buffer.from(buffer);
+            // Cast to any to avoid TypeScript issues with Uint8Array vs BlobPart in some environments
+            fileContent = new Blob([buffer as unknown as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
             extension = 'xlsx';
         } else {
-            fileContent = toCSV(filteredData);
+            const csv = toCSV(filteredData);
+            fileContent = new Blob([csv], { type: 'text/csv' });
             contentType = 'text/csv';
             extension = 'csv';
         }

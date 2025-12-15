@@ -159,7 +159,7 @@ export function createCSVBlob(csvString: string): Blob {
  * Create a downloadable blob from Excel buffer
  */
 export function createExcelBlob(excelBuffer: Uint8Array): Blob {
-    return new Blob([excelBuffer], {
+    return new Blob([excelBuffer.buffer as any], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
 }
