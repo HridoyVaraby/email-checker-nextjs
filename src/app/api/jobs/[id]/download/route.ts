@@ -24,7 +24,12 @@ export async function GET(
         // Build query
         const where: any = { jobId: id };
         if (statusFilter && statusFilter !== 'all') {
-            where.status = statusFilter;
+            if (statusFilter.includes(',')) {
+                const statuses = statusFilter.split(',');
+                where.status = { in: statuses };
+            } else {
+                where.status = statusFilter;
+            }
         }
 
         const results = await prisma.verificationResult.findMany({
@@ -33,6 +38,7 @@ export async function GET(
         });
 
         // Flatten data
+        // @ts-ignore
         const flatData = results.map(r => {
             let originalData = {};
             let details: any = {};

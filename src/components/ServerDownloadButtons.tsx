@@ -8,13 +8,20 @@ interface ServerDownloadButtonsProps {
 
 export default function ServerDownloadButtons({ jobId }: ServerDownloadButtonsProps) {
     const [isDownloading, setIsDownloading] = useState(false);
+    const [filter, setFilter] = useState<'all' | 'valid' | 'valid_risky'>('all');
 
     const handleDownload = (format: 'csv' | 'xlsx') => {
         setIsDownloading(true);
-        // Direct link to download
-        window.location.href = `/api/jobs/${jobId}/download?format=${format}`;
 
-        // Reset state after a delay (since we can't detect when download starts exactly via href)
+        // Determine status query param
+        let statusParam = 'all';
+        if (filter === 'valid') statusParam = 'Valid';
+        if (filter === 'valid_risky') statusParam = 'Valid,Risky';
+
+        // Direct link to download
+        window.location.href = `/api/jobs/${jobId}/download?format=${format}&status=${statusParam}`;
+
+        // Reset state after a delay
         setTimeout(() => setIsDownloading(false), 2000);
     };
 
@@ -24,6 +31,22 @@ export default function ServerDownloadButtons({ jobId }: ServerDownloadButtonsPr
             <p className="text-sm text-gray-600 mb-6">
                 Download the full results including original data and verification status.
             </p>
+
+            {/* Filter Selection */}
+            <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Select Records to Export
+                </label>
+                <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-black focus:border-black"
+                >
+                    <option value="all">All Results (Default)</option>
+                    <option value="valid">Valid Only</option>
+                    <option value="valid_risky">Valid & Risky Only</option>
+                </select>
+            </div>
 
             <div className="space-y-3">
                 <button
