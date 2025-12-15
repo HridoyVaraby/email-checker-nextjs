@@ -19,6 +19,7 @@ interface VerificationControlsProps {
     onVerify: (options: VerificationOptions) => void;
     isVerifying: boolean;
     progress: number;
+    processedCount: number;
     dataCount: number;
 }
 
@@ -34,6 +35,7 @@ export default function VerificationControls({
     onVerify,
     isVerifying,
     progress,
+    processedCount,
     dataCount
 }: VerificationControlsProps) {
     const [checkMx, setCheckMx] = useState(true);
@@ -105,7 +107,7 @@ export default function VerificationControls({
                 </div>
 
                 {/* Data Summary */}
-                {dataCount > 0 && (
+                {dataCount > 0 && !isVerifying && (
                     <div className="bg-gray-50 rounded-lg px-4 py-3">
                         <p className="text-sm text-gray-600">
                             Ready to verify <span className="font-semibold text-black">{dataCount}</span> email{dataCount !== 1 ? 's' : ''}
@@ -117,8 +119,8 @@ export default function VerificationControls({
                 {isVerifying && (
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm text-gray-600">
-                            <span>Verifying...</span>
-                            <span>{Math.round(progress)}%</span>
+                            <span>Processing...</span>
+                            <span>{processedCount} / {dataCount} Emails ({Math.round(progress)}%)</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                             <div

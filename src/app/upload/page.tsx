@@ -9,6 +9,7 @@ import { showToast } from '@/components/Toast';
 export default function UploadPage() {
     const router = useRouter();
     const [parsedData, setParsedData] = useState<ParsedData | null>(null);
+    const [processedCount, setProcessedCount] = useState(0);
     const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
     const [isVerifying, setIsVerifying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -35,46 +36,67 @@ export default function UploadPage() {
         if (!parsedData || !selectedColumn) return;
 
         setIsVerifying(true);
-        setProgress(10); // Start progress
+        setProgress(0);
+        setProcessedCount(0);
+
+        const CHUNK_SIZE = 10;
+        const totalRows = parsedData.data.length;
+        const allResults: Record<string, unknown>[] = [];
+        let completedCount = 0;
 
         try {
-            // Simulate progress for better UX
-            const progressInterval = setInterval(() => {
-                setProgress((prev) => {
-                    if (prev >= 90) return prev;
-                    return prev + Math.random() * 10;
+            // Process data in chunks
+            for (let i = 0; i < totalRows; i += CHUNK_SIZE) {
+                const chunk = parsedData.data.slice(i, i + CHUNK_SIZE);
+
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        data: chunk,
+                        emailColumn: selectedColumn,
+                        options
+                    }),
                 });
-            }, 500);
 
-            const response = await fetch('/api/verify', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    data: parsedData.data,
-                    emailColumn: selectedColumn,
-                    options
-                }),
-            });
+                if (!response.ok) {
+                    throw new Error(`Verification failed for batch ${i / CHUNK_SIZE + 1}`);
+                }
 
-            clearInterval(progressInterval);
-            setProgress(100);
+                const result = await response.json();
 
-            if (!response.ok) {
-                throw new Error('Verification failed');
+                if (!result.success) {
+                    throw new Error(result.message || 'Verification failed');
+                }
+
+                // Collect results
+                allResults.push(...result.data);
+
+                // Update progress
+                completedCount += chunk.length;
+                setProcessedCount(completedCount);
+                setProgress((completedCount / totalRows) * 100);
             }
 
-            const result = await response.json();
+            // Calculate final stats locally since we have all data
+            // (Or we could have the API return stats for the chunk and aggregate them, 
+            // but the Results page expects a certain format. Let's reconstruct the final object)
 
-            if (!result.success) {
-                throw new Error(result.message || 'Verification failed');
-            }
+            // Helper to aggregate stats
+            const stats = {
+                total: allResults.length,
+                valid: allResults.filter((r: any) => r.verification_status === 'Valid').length,
+                invalid: allResults.filter((r: any) => r.verification_status === 'Invalid').length,
+                risky: allResults.filter((r: any) => r.verification_status === 'Risky').length,
+                unknown: allResults.filter((r: any) => r.verification_status === 'Unknown').length,
+            };
 
             // Save results to sessionStorage for the results page
             sessionStorage.setItem('verificationResults', JSON.stringify({
-                data: result.data,
-                stats: result.stats,
+                data: allResults,
+                stats: stats,
                 emailColumn: selectedColumn,
                 filename: parsedData.filename
             }));
@@ -91,6 +113,7 @@ export default function UploadPage() {
             showToast.error(error instanceof Error ? error.message : 'Verification failed');
             setIsVerifying(false);
             setProgress(0);
+            setProcessedCount(0);
         }
     };
 
@@ -123,6 +146,7 @@ export default function UploadPage() {
                                 onVerify={handleVerify}
                                 isVerifying={isVerifying}
                                 progress={progress}
+                                processedCount={processedCount}
                                 dataCount={parsedData.rowCount}
                             />
                         </div>
