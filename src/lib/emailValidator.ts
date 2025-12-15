@@ -250,6 +250,13 @@ export async function verifyEmail(
     } else if (result.details.smtpValid === true) {
         result.status = 'Valid';
         result.reason = 'Verified existence via SMTP';
+    } else if (checkSmtp && result.details.smtpValid === null) {
+        // User requested SMTP check but it failed (likely timeout/blocked)
+        // We cannot interpret "MX exists" as "Valid" in this context
+        result.status = 'Unknown';
+        result.reason = result.details.hasMxRecord
+            ? 'Valid Domain (MX) - SMTP Connection Failed (Port 25 Blocked?)'
+            : 'SMTP Connection Failed';
     } else if (result.details.hasMxRecord) {
         result.status = 'Valid';
         result.reason = 'Valid domain with MX records';
