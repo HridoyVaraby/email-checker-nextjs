@@ -24,7 +24,7 @@ const ROLE_BASED_PREFIXES = [
 ];
 
 // Verification status types
-export type VerificationStatus = 'Valid' | 'Invalid' | 'Risky' | 'Unknown';
+export type VerificationStatus = 'Valid' | 'Invalid' | 'Risky' | 'Unknown' | 'TMD';
 
 // Detailed verification result
 export interface EmailVerificationResult {
@@ -242,8 +242,8 @@ export async function verifyEmail(
 
     // Step 6: Determine final status
     if (result.details.isDisposable) {
-        result.status = 'Risky';
-        result.reason = 'Disposable email domain';
+        result.status = 'TMD';
+        result.reason = 'Temp Mail Domain (Disposable)';
     } else if (result.details.isRoleBased) {
         result.status = 'Risky';
         result.reason = 'Role-based email address';
@@ -309,6 +309,7 @@ export function getVerificationStats(results: EmailVerificationResult[]): {
     invalid: number;
     risky: number;
     unknown: number;
+    tmd: number;
 } {
     return {
         total: results.length,
@@ -316,5 +317,6 @@ export function getVerificationStats(results: EmailVerificationResult[]): {
         invalid: results.filter(r => r.status === 'Invalid').length,
         risky: results.filter(r => r.status === 'Risky').length,
         unknown: results.filter(r => r.status === 'Unknown').length,
+        tmd: results.filter(r => r.status === 'TMD').length,
     };
 }

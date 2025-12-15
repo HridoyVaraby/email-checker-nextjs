@@ -19,6 +19,7 @@ export interface VerificationStats {
     invalid: number;
     risky: number;
     unknown: number;
+    tmd: number;
 }
 
 interface StatsSummaryProps {
@@ -84,6 +85,18 @@ export default function StatsSummary({ stats }: StatsSummaryProps) {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            )
+        },
+        {
+            label: 'TMD',
+            value: stats.tmd,
+            color: 'bg-purple-100 border-purple-300',
+            textColor: 'text-purple-800',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
             )
         }
@@ -159,6 +172,13 @@ export default function StatsSummary({ stats }: StatsSummaryProps) {
                                 title={`Unknown: ${stats.unknown}`}
                             />
                         )}
+                        {stats.tmd > 0 && (
+                            <div
+                                className="bg-purple-500 transition-all duration-500"
+                                style={{ width: getPercentage(stats.tmd) }}
+                                title={`TMD: ${stats.tmd}`}
+                            />
+                        )}
                     </div>
 
                     {/* Legend */}
@@ -178,6 +198,10 @@ export default function StatsSummary({ stats }: StatsSummaryProps) {
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-gray-200 border border-gray-300 rounded" />
                             <span className="text-gray-600">Unknown</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-purple-500 rounded" />
+                            <span className="text-gray-600">TMD</span>
                         </div>
                     </div>
                 </div>

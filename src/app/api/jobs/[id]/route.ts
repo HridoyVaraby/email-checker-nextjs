@@ -37,7 +37,8 @@ export async function GET(
             valid: 0,
             invalid: 0,
             risky: 0,
-            unknown: 0
+            unknown: 0,
+            tmd: 0
         };
 
         stats.forEach(s => {
@@ -46,6 +47,7 @@ export async function GET(
             else if (s.status === 'Invalid') formattedStats.invalid = count;
             else if (s.status === 'Risky') formattedStats.risky = count;
             else if (s.status === 'Unknown') formattedStats.unknown = count;
+            else if (s.status === 'TMD') formattedStats.tmd = count;
         });
 
         return NextResponse.json({

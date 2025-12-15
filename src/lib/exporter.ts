@@ -116,6 +116,13 @@ export function getRiskyOnly(data: ExportableResult[]): ExportableResult[] {
 }
 
 /**
+ * Get only TMD emails
+ */
+export function getTMDOnly(data: ExportableResult[]): ExportableResult[] {
+    return filterByStatus(data, ['TMD']);
+}
+
+/**
  * Get only invalid emails
  */
 export function getInvalidOnly(data: ExportableResult[]): ExportableResult[] {

@@ -14,7 +14,7 @@
 import React, { useState, useMemo } from 'react';
 
 // Type for verification status
-type VerificationStatus = 'Valid' | 'Invalid' | 'Risky' | 'Unknown';
+type VerificationStatus = 'Valid' | 'Invalid' | 'Risky' | 'Unknown' | 'TMD';
 
 // Type for table data
 export interface TableRow {
@@ -35,6 +35,7 @@ function StatusPill({ status }: { status: VerificationStatus }) {
         Invalid: 'bg-black text-white border-2 border-black',
         Risky: 'bg-gray-400 text-white border-2 border-gray-400',
         Unknown: 'bg-white text-gray-500 border-2 border-gray-300',
+        TMD: 'bg-purple-100 text-purple-800 border-2 border-purple-300',
     };
 
     return (
@@ -125,7 +126,7 @@ export default function ResultsTable({ data, emailColumn }: ResultsTableProps) {
 
                 {/* Status Filter */}
                 <div className="flex gap-2 flex-wrap">
-                    {(['all', 'Valid', 'Invalid', 'Risky', 'Unknown'] as const).map((status) => (
+                    {(['all', 'Valid', 'Invalid', 'Risky', 'TMD', 'Unknown'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => setStatusFilter(status)}
