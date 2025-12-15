@@ -19,6 +19,7 @@ export interface ParsedData {
     emailColumn: string | null;
     filename: string;
     rowCount: number;
+    file: File;
 }
 
 interface FileUploaderProps {
@@ -165,7 +166,8 @@ export default function FileUploader({ onDataParsed, onError }: FileUploaderProp
                 columns,
                 emailColumn,
                 filename: file.name,
-                rowCount: data.length
+                rowCount: data.length,
+                file: file
             });
 
         } catch (error: unknown) {

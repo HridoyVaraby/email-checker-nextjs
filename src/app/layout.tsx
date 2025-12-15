@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased min-h-screen flex flex-col`}>
+      <body className={`${inter.variable} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
         {/* Simple Header */}
         <header className="border-b border-gray-100 bg-white sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,9 +34,16 @@ export default function RootLayout({
                 </div>
                 <span className="font-bold text-xl tracking-tight">EmailVerifier</span>
               </div>
-              <nav className="flex items-center gap-4">
+              <nav className="flex items-center gap-6">
+                <a href="/upload" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
+                  Upload
+                </a>
+                <a href="/history" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
+                  History
+                </a>
+                <div className="h-4 w-px bg-gray-200" />
                 <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-black transition-colors">
+                  className="text-gray-500 hover:text-black transition-colors text-sm">
                   GitHub
                 </a>
               </nav>

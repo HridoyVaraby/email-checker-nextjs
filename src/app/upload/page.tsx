@@ -4,17 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import FileUploader, { ParsedData } from '@/components/FileUploader';
 import VerificationControls, { VerificationOptions } from '@/components/VerificationControls';
-import StatsSummary, { VerificationStats } from '@/components/StatsSummary';
-import ResultsTable, { TableRow } from '@/components/ResultsTable';
-import DownloadButtons from '@/components/DownloadButtons';
 import { showToast } from '@/components/Toast';
-
-interface VerificationResultData {
-    data: any[];
-    stats: VerificationStats;
-    emailColumn: string;
-    filename: string;
-}
 
 export default function UploadPage() {
     const router = useRouter();
@@ -23,7 +13,6 @@ export default function UploadPage() {
     const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
     const [isVerifying, setIsVerifying] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [verificationResult, setVerificationResult] = useState<VerificationResultData | null>(null);
 
     // Auto-select column when data is parsed
     useEffect(() => {
@@ -36,7 +25,6 @@ export default function UploadPage() {
 
     const handleDataParsed = (data: ParsedData) => {
         setParsedData(data);
-        setVerificationResult(null); // Reset results on new upload
         showToast.success(`Successfully parsed ${data.rowCount} rows`);
     };
 
@@ -48,141 +36,53 @@ export default function UploadPage() {
         if (!parsedData || !selectedColumn) return;
 
         setIsVerifying(true);
-        setProgress(0);
-        setProcessedCount(0);
-        setVerificationResult(null);
-
-        const CHUNK_SIZE = 10;
-        const totalRows = parsedData.data.length;
-        const allResults: Record<string, unknown>[] = [];
-        let completedCount = 0;
+        // Fake progress for upload phase
+        setProgress(10);
 
         try {
-            // Process data in chunks
-            for (let i = 0; i < totalRows; i += CHUNK_SIZE) {
-                const chunk = parsedData.data.slice(i, i + CHUNK_SIZE);
+            // 1. Create Job (Upload File)
+            const formData = new FormData();
+            formData.append('file', parsedData.file);
+            formData.append('emailColumn', selectedColumn);
 
-                const response = await fetch('/api/verify', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        data: chunk,
-                        emailColumn: selectedColumn,
-                        options
-                    }),
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Verification failed for batch ${i / CHUNK_SIZE + 1}`);
-                }
-
-                const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.message || 'Verification failed');
-                }
-
-                // Collect results
-                allResults.push(...result.data);
-
-                // Update progress
-                completedCount += chunk.length;
-                setProcessedCount(completedCount);
-                setProgress((completedCount / totalRows) * 100);
-            }
-
-            // Calculate final stats locally
-            const stats = {
-                total: allResults.length,
-                valid: allResults.filter((r: any) => r.verification_status === 'Valid').length,
-                invalid: allResults.filter((r: any) => r.verification_status === 'Invalid').length,
-                risky: allResults.filter((r: any) => r.verification_status === 'Risky').length,
-                unknown: allResults.filter((r: any) => r.verification_status === 'Unknown').length,
-            };
-
-            // Set results directly in state instead of storage/navigation
-            setVerificationResult({
-                data: allResults,
-                stats,
-                emailColumn: selectedColumn,
-                filename: parsedData.filename
+            const uploadRes = await fetch('/api/jobs', {
+                method: 'POST',
+                body: formData
             });
 
-            showToast.success('Verification complete!');
+            if (!uploadRes.ok) throw new Error('Failed to upload file');
+            const uploadData = await uploadRes.json();
+
+            if (!uploadData.success) throw new Error(uploadData.message);
+            const jobId = uploadData.data.id;
+
+            setProgress(50);
+
+            // 2. Start Processing
+            const startRes = await fetch(`/api/jobs/${jobId}/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(options)
+            });
+
+            if (!startRes.ok) throw new Error('Failed to start processing');
+            const startData = await startRes.json();
+
+            if (!startData.success) throw new Error(startData.message);
+
+            setProgress(100);
+            showToast.success('Verification started!');
+
+            // 3. Redirect to Status/History Page
+            router.push(`/history/${jobId}`);
 
         } catch (error) {
-            console.error('Verification error:', error);
-            showToast.error(error instanceof Error ? error.message : 'Verification failed');
-            setProgress(0);
-            setProcessedCount(0);
-        } finally {
+            console.error('Verification initiation error:', error);
+            showToast.error(error instanceof Error ? error.message : 'Failed to start verification');
             setIsVerifying(false);
+            setProgress(0);
         }
     };
-
-    const handleStartOver = () => {
-        setParsedData(null);
-        setVerificationResult(null);
-        setProcessedCount(0);
-        setProgress(0);
-        setSelectedColumn(null);
-    };
-
-    if (verificationResult) {
-        return (
-            <div className="min-h-screen bg-gray-50 py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                        <div>
-                            <h1 className="text-3xl font-bold text-black mb-1">Verification Results</h1>
-                            <p className="text-gray-600">
-                                File: <span className="font-medium text-black">{verificationResult.filename}</span>
-                            </p>
-                        </div>
-
-                        <button
-                            onClick={handleStartOver}
-                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Start New Verification
-                        </button>
-                    </div>
-
-                    <div className="space-y-8">
-                        {/* Stats Summary */}
-                        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <StatsSummary stats={verificationResult.stats} />
-                        </section>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Main Results Table (2/3 width) */}
-                            <section className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-semibold text-black">Email List</h3>
-                                </div>
-                                <ResultsTable
-                                    data={verificationResult.data}
-                                    emailColumn={verificationResult.emailColumn}
-                                />
-                            </section>
-
-                            {/* Download Options (1/3 width) */}
-                            <div className="space-y-6">
-                                <section className="sticky top-24">
-                                    <DownloadButtons
-                                        data={verificationResult.data}
-                                    />
-                                </section>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 py-12">
@@ -190,7 +90,7 @@ export default function UploadPage() {
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-black mb-2">Upload Data</h1>
                     <p className="text-gray-600">
-                        Upload your email list to start the verification process.
+                        Upload your email list to start the verification process. The process will run in the background.
                     </p>
                 </div>
 
