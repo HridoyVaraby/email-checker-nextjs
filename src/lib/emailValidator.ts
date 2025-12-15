@@ -10,6 +10,7 @@
  */
 
 import { isDisposableDomain } from './disposableDomains';
+import { verifySmtp } from './smtpVerifier';
 
 // Role-based email prefixes that indicate generic/shared addresses
 const ROLE_BASED_PREFIXES = [
@@ -173,7 +174,7 @@ export async function verifyEmail(
         checkSmtp?: boolean;
     } = {}
 ): Promise<EmailVerificationResult> {
-    const { checkMx = true } = options;
+    const { checkMx = true, checkSmtp = false } = options;
 
     const result: EmailVerificationResult = {
         email: email.trim().toLowerCase(),
@@ -224,16 +225,34 @@ export async function verifyEmail(
         }
     }
 
-    // Step 5: Determine final status
+    // Step 5: SMTP Verification (Optional)
+    // Only run if not already invalid/risky and MX check passed (or was skipped)
+    if (checkSmtp && !result.details.isDisposable && result.details.hasMxRecord !== false) {
+        const smtpResult = await verifySmtp(email, { timeout: 5000 });
+        result.details.smtpValid = smtpResult.valid;
+        // Note: verifySmtp also checks for catch-all (optional to use that info here)
+
+        if (smtpResult.valid === false) {
+            result.status = 'Invalid';
+            result.reason = smtpResult.message || 'Mailbox does not exist';
+            // Return early since we know it's invalid
+            return result;
+        }
+    }
+
+    // Step 6: Determine final status
     if (result.details.isDisposable) {
         result.status = 'Risky';
         result.reason = 'Disposable email domain';
     } else if (result.details.isRoleBased) {
         result.status = 'Risky';
         result.reason = 'Role-based email address';
+    } else if (result.details.smtpValid === true) {
+        result.status = 'Valid';
+        result.reason = 'Verified existence via SMTP';
     } else if (result.details.hasMxRecord) {
         result.status = 'Valid';
-        result.reason = 'Email appears valid';
+        result.reason = 'Valid domain with MX records';
     } else {
         result.status = 'Unknown';
         result.reason = 'Could not fully verify email';
