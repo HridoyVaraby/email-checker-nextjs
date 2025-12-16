@@ -1,9 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { prisma } from './db';
 import { verifyEmail } from './emailValidator';
+import { storage } from './storage';
 
 interface WorkerOptions {
     checkMx: boolean;
@@ -30,12 +30,7 @@ export async function processJob(jobId: string, options: WorkerOptions) {
         });
 
         // 2. Read File
-        const filePath = path.join(process.cwd(), 'uploads', job.filename);
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-        }
-
-        const fileBuffer = fs.readFileSync(filePath);
+        const fileBuffer = await storage.getFile(job.filename);
         let records: any[] = [];
 
         if (job.filename.endsWith('.csv')) {

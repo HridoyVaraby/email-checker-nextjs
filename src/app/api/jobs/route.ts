@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
+import { storage } from '@/lib/storage';
 import path from 'path';
 
 export async function GET() {
@@ -29,19 +29,14 @@ export async function POST(request: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Ensure uploads directory exists
-        const uploadDir = path.join(process.cwd(), 'uploads');
-        await mkdir(uploadDir, { recursive: true });
-
         // Generate unique filename
         const uniqueId = crypto.randomUUID();
         const originalName = file.name;
         const extension = path.extname(originalName);
         const savedFilename = `${uniqueId}${extension}`;
-        const filePath = path.join(uploadDir, savedFilename);
 
-        // Save file
-        await writeFile(filePath, buffer);
+        // Upload to S3/Minio
+        await storage.uploadFile(savedFilename, buffer, file.type || 'application/octet-stream');
 
         // Create Job Record
         const job = await prisma.verificationJob.create({
