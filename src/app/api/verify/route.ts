@@ -9,12 +9,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyEmail, getVerificationStats, VerificationStatus, EmailVerificationResult } from '@/lib/emailValidator';
+import { auth } from '@/auth';
 
 // Type for incoming data records
 interface DataRecord {
     [key: string]: string | number | boolean | null | undefined;
 }
-
 // Type for verification request
 interface VerifyRequest {
     data: DataRecord[];
@@ -24,6 +24,7 @@ interface VerifyRequest {
         checkSmtp?: boolean;
     };
 }
+
 
 // Type for verification response
 interface VerifyResponse {
@@ -41,6 +42,19 @@ interface VerifyResponse {
 
 export async function POST(request: NextRequest): Promise<NextResponse<VerifyResponse>> {
     try {
+        const session = await auth();
+        if (!session) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    data: [],
+                    stats: { total: 0, valid: 0, invalid: 0, risky: 0, unknown: 0 },
+                    message: 'Unauthorized'
+                },
+                { status: 401 }
+            );
+        }
+
         const body: VerifyRequest = await request.json();
         const { data, emailColumn, options = {} } = body;
 

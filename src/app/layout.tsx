@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google"; // Using Inter as requested
 import "./globals.css";
 import ToastProvider from "@/components/Toast";
+import { auth, signOut } from "@/auth";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -14,11 +15,12 @@ export const metadata: Metadata = {
   description: "Verify email lists with syntax check, domain validation, and risk detection.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
@@ -34,19 +36,41 @@ export default function RootLayout({
                 </div>
                 <span className="font-bold text-xl tracking-tight">EmailVerifier</span>
               </div>
-              <nav className="flex items-center gap-6">
-                <a href="/upload" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
-                  Upload
-                </a>
-                <a href="/history" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
-                  History
-                </a>
-                <div className="h-4 w-px bg-gray-200" />
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-black transition-colors text-sm">
-                  GitHub
-                </a>
-              </nav>
+              <div className="flex items-center gap-6">
+                {session?.user ? (
+                  <>
+                    <a href="/upload" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
+                      Upload
+                    </a>
+                    <a href="/history" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
+                      History
+                    </a>
+                    <div className="h-4 w-px bg-gray-200" />
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-medium text-gray-700">{session.user.name || session.user.email}</span>
+                      <form
+                        action={async () => {
+                          "use server"
+                          await signOut()
+                        }}
+                      >
+                        <button className="text-red-500 hover:text-red-700 text-sm font-medium">
+                          Sign Out
+                        </button>
+                      </form>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <a href="/login" className="text-gray-600 hover:text-black font-medium text-sm transition-colors">
+                      Sign In
+                    </a>
+                    <a href="/register" className="bg-black text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-800 transition-colors">
+                      Sign Up
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </header>
