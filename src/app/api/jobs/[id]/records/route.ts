@@ -19,7 +19,7 @@ export async function GET(
         });
 
         // Transform to flat format suitable for table
-        const flatData = results.map(r => {
+        const flatData = results.map((r: any) => {
             let originalData = {};
             let details = {};
             try {
