@@ -41,7 +41,7 @@ export async function GET(
             tmd: 0
         };
 
-        stats.forEach(s => {
+        stats.forEach((s: any) => {
             const count = s._count.status;
             if (s.status === 'Valid') formattedStats.valid = count;
             else if (s.status === 'Invalid') formattedStats.invalid = count;
