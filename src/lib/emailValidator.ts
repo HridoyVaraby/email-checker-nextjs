@@ -254,11 +254,22 @@ export async function verifyEmail(
         result.reason = 'Verified existence via SMTP';
     } else if (checkSmtp && result.details.smtpValid === null) {
         // User requested SMTP check but it returned unknown (timeout, blocked, policy rejection)
-        result.status = 'Unknown';
-        // Use the stored SMTP message if available
-        result.reason = smtpMessage || (result.details.hasMxRecord
-            ? 'Valid Domain (MX) - SMTP verification inconclusive'
-            : 'SMTP Connection Failed');
+        // Check if it's a policy rejection (mailbox may exist) vs connection failure
+        const isPolicyRejection = smtpMessage.toLowerCase().includes('blocked') ||
+            smtpMessage.toLowerCase().includes('policy') ||
+            smtpMessage.toLowerCase().includes('rejected');
+
+        if (isPolicyRejection && result.details.hasMxRecord) {
+            // Policy rejection means mailbox may exist, mark as Risky
+            result.status = 'Risky';
+            result.reason = `Mailbox may exist - ${smtpMessage}`;
+        } else {
+            // True connection failure (timeout, port blocked, etc.)
+            result.status = 'Unknown';
+            result.reason = smtpMessage || (result.details.hasMxRecord
+                ? 'Valid Domain (MX) - SMTP verification inconclusive'
+                : 'SMTP Connection Failed');
+        }
     } else if (result.details.hasMxRecord) {
         result.status = 'Valid';
         result.reason = 'Valid domain with MX records';
