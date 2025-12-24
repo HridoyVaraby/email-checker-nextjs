@@ -136,6 +136,16 @@ async function performSmtpHandshake(
             for (const line of lines) {
                 if (!line) continue;
 
+                // SMTP multi-line responses use:
+                // - "XXX-text" for continuation lines (hyphen after code)
+                // - "XXX text" for final line (space after code)
+                // We must only process the FINAL line of a multi-line response
+                const isMultiLineContinuation = line.length > 3 && line[3] === '-';
+                if (isMultiLineContinuation) {
+                    // This is a continuation line, skip it and wait for the final line
+                    continue;
+                }
+
                 const code = parseInt(line.substring(0, 3));
 
                 switch (stage) {
