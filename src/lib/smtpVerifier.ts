@@ -186,8 +186,31 @@ async function performSmtpHandshake(
                         if (code === 250 || code === 251) {
                             resolve({ valid: true, isCatchAll: false, message: 'Mailbox exists' });
                         } else if (code === 550 || code === 551 || code === 552 || code === 553) {
-                            resolve({ valid: false, isCatchAll: false, message: 'Mailbox does not exist' });
+                            // Parse enhanced status code to distinguish error types
+                            // Format: "550 5.1.1 User unknown" or "550 5.7.1 Blocked by policy"
+                            const enhancedMatch = line.match(/^\d{3}\s+(\d+)\.(\d+)\.(\d+)/);
+
+                            if (enhancedMatch) {
+                                const classCode = enhancedMatch[1]; // 5 = permanent failure
+                                const subjectCode = enhancedMatch[2]; // 1=address, 7=policy
+
+                                if (subjectCode === '1') {
+                                    // 5.1.x = Address/mailbox related errors (user doesn't exist)
+                                    resolve({ valid: false, isCatchAll: false, message: 'Mailbox does not exist' });
+                                } else if (subjectCode === '7') {
+                                    // 5.7.x = Security/policy rejection (blocked by spam filter, etc.)
+                                    // This does NOT mean the mailbox doesn't exist!
+                                    resolve({ valid: null, isCatchAll: null, message: `Blocked by mail server policy: ${line.substring(0, 100)}` });
+                                } else {
+                                    // Other enhanced codes - be conservative, return unknown
+                                    resolve({ valid: null, isCatchAll: null, message: `Server rejected: ${line.substring(0, 100)}` });
+                                }
+                            } else {
+                                // No enhanced status code - assume mailbox error for basic 550
+                                resolve({ valid: false, isCatchAll: false, message: 'Mailbox does not exist' });
+                            }
                         } else if (code === 450 || code === 451 || code === 452) {
+                            // Temporary errors - could be greylisting, try again later
                             resolve({ valid: null, isCatchAll: null, message: 'Temporary error - try again later' });
                         } else {
                             resolve({ valid: null, isCatchAll: null, message: `Unknown response: ${code}` });

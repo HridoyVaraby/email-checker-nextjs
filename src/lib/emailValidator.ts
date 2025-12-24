@@ -227,14 +227,16 @@ export async function verifyEmail(
 
     // Step 5: SMTP Verification (Optional)
     // Only run if not already invalid/risky and MX check passed (or was skipped)
+    let smtpMessage = '';
     if (checkSmtp && !result.details.isDisposable && result.details.hasMxRecord !== false) {
         const smtpResult = await verifySmtp(email, { timeout: 5000 });
         result.details.smtpValid = smtpResult.valid;
+        smtpMessage = smtpResult.message || '';
         // Note: verifySmtp also checks for catch-all (optional to use that info here)
 
         if (smtpResult.valid === false) {
             result.status = 'Invalid';
-            result.reason = smtpResult.message || 'Mailbox does not exist';
+            result.reason = smtpMessage || 'Mailbox does not exist';
             // Return early since we know it's invalid
             return result;
         }
@@ -251,12 +253,12 @@ export async function verifyEmail(
         result.status = 'Valid';
         result.reason = 'Verified existence via SMTP';
     } else if (checkSmtp && result.details.smtpValid === null) {
-        // User requested SMTP check but it failed (likely timeout/blocked)
-        // We cannot interpret "MX exists" as "Valid" in this context
+        // User requested SMTP check but it returned unknown (timeout, blocked, policy rejection)
         result.status = 'Unknown';
-        result.reason = result.details.hasMxRecord
-            ? 'Valid Domain (MX) - SMTP Connection Failed (Port 25 Blocked?)'
-            : 'SMTP Connection Failed';
+        // Use the stored SMTP message if available
+        result.reason = smtpMessage || (result.details.hasMxRecord
+            ? 'Valid Domain (MX) - SMTP verification inconclusive'
+            : 'SMTP Connection Failed');
     } else if (result.details.hasMxRecord) {
         result.status = 'Valid';
         result.reason = 'Valid domain with MX records';
